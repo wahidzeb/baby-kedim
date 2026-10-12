@@ -169,6 +169,12 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
  .gpill{max-width:300px}
 }
 
+.screen:not(.hidden){animation:scrIn .32s cubic-bezier(.2,1.4,.4,1)}
+@keyframes scrIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.rb:active,.si:active,.tab:active,button:active{transform:scale(.9)!important}
+.rb{background:radial-gradient(circle at 35% 25%,#fff 0,#fff 35%,#efe0ff 100%)}
+.rb::after{content:'';position:absolute;left:8px;right:8px;top:4px;height:10px;border-radius:8px;background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,0));pointer-events:none}
+
 </style>
 </head>
 <body>
@@ -343,8 +349,8 @@ function shade(hex, f) { var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n
 /* ---------- Kedim ---------- */
 var FUR = '#2b2e3b', FUR2 = '#12131a', FURL = '#454b62', RIM = '#9fb4dc', OL = '#56648a', LN = '#c3d0ea', EYE1 = '#eaff86', EYE2 = '#9fd62a';
 var BODY = [ // per stage: body rx, ry, head rx, ry, ear, eye r
-  { brx: 26, bry: 24, hrx: 47, hry: 40, ear: 17, er: 15.5 },
-  { brx: 29, bry: 30, hrx: 44, hry: 38, ear: 18, er: 13.5 },
+  { brx: 21, bry: 18, hrx: 46, hry: 41, ear: 14, er: 17.5 },
+  { brx: 30, bry: 33, hrx: 41, hry: 35, ear: 19, er: 12.5 },
   { brx: 32, bry: 37, hrx: 39, hry: 33, ear: 19, er: 11 },
   { brx: 36, bry: 42, hrx: 37, hry: 31, ear: 19, er: 10 }];
 function kRim(c, x, y, rx, ry) { c.save(); c.strokeStyle = RIM; c.globalAlpha = .85; c.lineWidth = 2.4; c.beginPath(); c.ellipse(x, y, rx - 3, ry - 3, 0, Math.PI * 1.04, Math.PI * 1.58); c.stroke(); c.globalAlpha = .4; c.lineWidth = 1.6; c.beginPath(); c.ellipse(x, y, rx - 3, ry - 3, 0, Math.PI * 1.72, Math.PI * 1.98); c.stroke(); c.restore(); }
@@ -354,14 +360,14 @@ function drawKedim(c, x, y, o) {
   if (form === 'snack') { P.brx = 45; P.bry = 41; } else if (form === 'adventurer') { P.brx = 32; P.bry = 44; }
   var sleep = pose === 'sleep', expr = o.expr || 'idle'; if (sleep) expr = 'sleep';
   var br = sleep ? Math.sin(t * 1.7) * 2.2 : Math.sin(t * 2.4) * 1.2, sq = o.squash || 0;
-  c.save(); c.translate(x, y); var s = o.scale || 1; c.scale(s * (1 + sq * .12), s * (1 - sq * .12)); c.lineJoin = c.lineCap = 'round';
+  c.save(); c.translate(x, y); var s = o.scale || 1; var bs = sleep ? 0 : Math.sin(t * 2.4) * .012; c.scale(s * (1 + sq * .14 - bs), s * (1 - sq * .14 + bs)); c.lineJoin = c.lineCap = 'round';
   if (pose === 'purr') c.translate(Math.sin(t * 55) * .7, 0);
   // shadow
   c.fillStyle = 'rgba(30,20,50,.28)'; ell(c, 0, 2, P.brx * 1.35, 9); c.fill();
   // tail
-  var tw = Math.sin(t * (sleep ? .9 : pose === 'happy' ? 7 : 2.3)) * (pose === 'sulky' ? .08 : .32);
+  var tw = Math.sin(t * (sleep ? .9 : pose === 'happy' ? 7 : 2.3)) * (pose === 'sulky' ? .08 : .32) + (sleep ? 0 : Math.sin(t * 5.3) * Math.max(0, Math.sin(t * .7)) * .18);
   c.save(); c.translate(P.brx * .75, -P.bry * .45); c.rotate((sleep ? 1.1 : .25) + tw);
-  var tl = 26 + st * 6; c.strokeStyle = OL; c.lineWidth = 15; c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(tl * .8, 4, tl * 1.1, -tl * .7, tl * .8, -tl * 1.4); c.stroke(); c.strokeStyle = FUR; c.lineWidth = 10.5; c.stroke();
+  var tl = 26 + st * 6; c.strokeStyle = OL; c.lineWidth = 15; c.beginPath(); c.moveTo(0, 0); var tc = Math.sin(t * 3.1 + 1) * tl * .25; c.bezierCurveTo(tl * .8, 4, tl * 1.1 + tc, -tl * .7, tl * .8 + tc * 1.6, -tl * 1.4); c.stroke(); c.strokeStyle = FUR; c.lineWidth = 10.5; c.stroke();
   c.strokeStyle = RIM; c.globalAlpha = .55; c.lineWidth = 2; c.beginPath(); c.moveTo(3, -2.5); c.bezierCurveTo(tl * .8, 0, tl * 1.06, -tl * .7, tl * .76, -tl * 1.36); c.stroke(); c.globalAlpha = 1; c.restore();
   // body
   var by = -P.bry - br * .3;
@@ -388,11 +394,12 @@ function drawKedim(c, x, y, o) {
   var hy = by - P.bry - P.hry * .62 + (sleep ? 6 : 0), tilt = sleep ? .22 : pose === 'sulky' ? -.08 : Math.sin(t * .9) * .035 + (o.look || 0) * .06;
   c.save(); c.translate(0, hy); c.rotate(tilt);
   var eb = pose === 'sulky' || sleep ? .25 : 0;
-  for (k = -1; k <= 1; k += 2) { c.save(); c.translate(k * P.hrx * .58, -P.hry * .62); c.rotate(k * (.38 + eb) + (expr === 'happy' ? Math.sin(t * 9) * .06 * k : 0)); var E = P.ear; c.beginPath(); c.moveTo(-E * .72, E * .55); c.quadraticCurveTo(-E * .2, -E * .6, 0, -E); c.quadraticCurveTo(E * .2, -E * .6, E * .72, E * .55); c.closePath(); fs(c, lg(c, 0, -E, 0, E * .6, [FURL, FUR]), 3, OL); c.fillStyle = lg(c, 0, -E * .6, 0, E * .5, ['#ffc4d2', '#ff8fae']); c.beginPath(); c.moveTo(-E * .38, E * .45); c.quadraticCurveTo(0, -E * .55, E * .38, E * .45); c.closePath(); c.fill(); c.restore(); }
+  for (k = -1; k <= 1; k += 2) { c.save(); c.translate(k * P.hrx * .58, -P.hry * .62); var etw = (!sleep && k === ((t / 4.7 | 0) % 2 ? 1 : -1) && (t % 4.7) < .25) ? Math.sin((t % 4.7) / .25 * Math.PI * 2) * .22 : 0; c.rotate(etw + k * (.38 + eb) + (expr === 'happy' ? Math.sin(t * 9) * .06 * k : 0)); var E = P.ear; c.beginPath(); c.moveTo(-E * .72, E * .55); c.quadraticCurveTo(-E * .2, -E * .6, 0, -E); c.quadraticCurveTo(E * .2, -E * .6, E * .72, E * .55); c.closePath(); fs(c, lg(c, 0, -E, 0, E * .6, [FURL, FUR]), 3, OL); c.fillStyle = lg(c, 0, -E * .6, 0, E * .5, ['#ffc4d2', '#ff8fae']); c.beginPath(); c.moveTo(-E * .38, E * .45); c.quadraticCurveTo(0, -E * .55, E * .38, E * .45); c.closePath(); c.fill(); c.restore(); }
   ell(c, 0, 0, P.hrx, P.hry); fs(c, rg(c, 0, 0, 4, P.hrx * 1.1, [FURL, FUR, FUR2], -P.hrx * .25, -P.hry * .35), 3, OL); kRim(c, 0, 0, P.hrx, P.hry);
   // cheek tufts
   c.fillStyle = FUR; for (k = -1; k <= 1; k += 2) { c.beginPath(); c.moveTo(k * (P.hrx - 3), P.hry * .05); c.lineTo(k * (P.hrx + 6), P.hry * .28); c.lineTo(k * (P.hrx - 2), P.hry * .38); c.lineTo(k * (P.hrx + 3), P.hry * .55); c.lineTo(k * (P.hrx - 8), P.hry * .6); c.fill(); c.strokeStyle = OL; c.lineWidth = 2; c.stroke(); }
   ell(c, 0, 0, P.hrx - 1.5, P.hry - 1.5); c.fillStyle = rg(c, 0, 0, 4, P.hrx * 1.1, [FURL, FUR, FUR2], -P.hrx * .25, -P.hry * .35); c.fill(); kRim(c, 0, 0, P.hrx, P.hry);
+  if (st === 0) { c.fillStyle = FUR; c.strokeStyle = OL; c.lineWidth = 2; c.beginPath(); c.moveTo(-6, -P.hry + 3); c.quadraticCurveTo(-3, -P.hry - 10, 2, -P.hry - 4); c.quadraticCurveTo(5, -P.hry - 12, 8, -P.hry + 3); c.fill(); c.stroke(); }
   // head shine
   c.fillStyle = 'rgba(190,210,255,.13)'; ell(c, -P.hrx * .3, -P.hry * .55, P.hrx * .35, P.hry * .16, -.3); c.fill();
   // muzzle
@@ -554,7 +561,7 @@ function drawSide(c, id, x, y, t) {
 /* WebAudio synth: SFX, cat voice, purr, lullaby loop and a talk-back recorder. All made in code. */
 var AU = (function () {
   var ctx = null, master = null, musG = null, on = { snd: 1, mus: 1 }, musT = null, step = 0, nextT = 0, song = null, purrN = null;
-  function init() { if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; } try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = .55; master.connect(ctx.destination); musG = ctx.createGain(); musG.gain.value = .11; musG.connect(master); } catch (e) { ctx = null; } }
+  function init() { if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; } try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.gain.value = .55; var cmp = ctx.createDynamicsCompressor(); cmp.threshold.value = -16; cmp.ratio.value = 4; var dl = ctx.createDelay(); dl.delayTime.value = .09; var fb = ctx.createGain(); fb.gain.value = .22; var wf = ctx.createBiquadFilter(); wf.type = 'lowpass'; wf.frequency.value = 2400; master.connect(cmp); master.connect(dl); dl.connect(wf); wf.connect(fb); fb.connect(dl); fb.connect(cmp); cmp.connect(ctx.destination); musG = ctx.createGain(); musG.gain.value = .11; musG.connect(master); } catch (e) { ctx = null; } }
   function tone(f, d, type, vol, slide, when, dest) { if (!ctx) return; var t = when || ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t + d); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol || .3, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + d); o.connect(g); g.connect(dest || master); o.start(t); o.stop(t + d + .05); }
   function noise(d, vol, hp, lp) { if (!ctx) return; var n = ctx.sampleRate * d | 0, b = ctx.createBuffer(1, n, ctx.sampleRate), a = b.getChannelData(0); for (var i = 0; i < n; i++) a[i] = (Math.random() * 2 - 1) * (1 - i / n); var s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = lp ? 'lowpass' : 'highpass'; f.frequency.value = lp || hp || 800; s.buffer = b; g.gain.value = vol || .2; s.connect(f); f.connect(g); g.connect(master); s.start(); }
   function meow(p, len) { if (!ctx) return; p = p || 1; len = len || .45; var t = ctx.currentTime, o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter(); o.type = 'sawtooth'; o2.type = 'sine'; f.type = 'bandpass'; f.Q.value = 3.5;
@@ -666,8 +673,8 @@ function stageName() { return S.stage === 3 ? FORMS[S.form] || 'Adult' : 'Baby K
 function fmtT(s) { s = Math.max(0, Math.ceil(s)); if (s < 60) return s + 's'; if (s < 3600) return Math.ceil(s / 60) + 'm'; var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h + 'h' + (m ? ' ' + m + 'm' : ''); }
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR | 0; cv.height = H * DPR | 0; SC = W > H ? clamp(H / 470, .6, 1.6) : clamp(Math.min(W / 400, H / 760), .7, 1.6); VW = W / SC; VH = H / SC; }
 function land() { return W > H; }
-function kPos() { var l = land(); return { x: VW / 2 + (l ? -20 : 0), y: l ? VH - 96 : VH - 214, s: (S.stage === 0 ? 1.3 : 1.2) * (l ? .82 : 1) }; }
-function floorY() { return kPos().y - (land() ? 64 : 92); }
+function kPos() { var l = land(); return { x: VW / 2 + (l ? -20 : 0), y: l ? VH - 70 : VH - 214, s: (S.stage === 0 ? 1.15 : S.stage === 1 ? 1.25 : 1.3) * (l ? 1.12 : 1) }; }
+function floorY() { return kPos().y - (land() ? 44 : 92); }
 function L(e) { return { x: e.clientX / SC, y: e.clientY / SC }; }
 function part(x, y, o) { if (G.parts.length > 260) G.parts.shift(); G.parts.push(Object.assign({ x: x, y: y, vx: rnd(-80, 80), vy: rnd(-160, -40), g: 300, life: 1, max: 1, s: 6, col: '#fff', ty: 'dot', rot: rnd(0, 6), vr: rnd(-4, 4) }, o)); }
 function burst(x, y, n, cols, o) { for (var i = 0; i < n; i++) part(x, y, Object.assign({ col: cols[i % cols.length], s: rnd(3, 7), life: rnd(.5, 1), vx: rnd(-200, 200), vy: rnd(-260, -40) }, o || {})); }
@@ -747,6 +754,7 @@ function lighting(c, id, fy, t) {
   var night = hour() < 6 || hour() >= 20 || (id === 'bed' && S.asleep);
   c.save(); c.globalCompositeOperation = 'lighter';
   if (!night) { var gx = VW / 2; c.fillStyle = lg(c, 0, 0, 0, VH, ['rgba(255,240,200,.16)', 'rgba(255,240,200,0)']); c.beginPath(); c.moveTo(gx - 80, 60); c.lineTo(gx + 80, 60); c.lineTo(gx + 200, VH); c.lineTo(gx - 60, VH); c.closePath(); c.fill(); }
+  if (!night) { c.fillStyle = 'rgba(255,236,190,.10)'; c.beginPath(); c.ellipse(VW / 2 + 40, kPos().y - 10, 150, 30, 0, 0, TAU); c.fill(); for (var di = 0; di < 14; di++) { var dx = (di * 97.3 + t * (6 + di % 3 * 3)) % VW, dy = 80 + ((di * 61.7 + t * (4 + di % 4)) % (VH * .7)); c.globalAlpha = .25 + .25 * Math.sin(t * 1.3 + di); c.fillStyle = '#fff6d8'; c.beginPath(); c.arc(dx, dy, 1.2 + di % 3 * .6, 0, TAU); c.fill(); } c.globalAlpha = 1; }
   var kp = kPos(); glow(c, kp.x, kp.y - 80, 210, night ? '#6a6aff' : '#fff2d8', night ? .10 : .22);
   c.restore();
   var v = c.createRadialGradient(VW / 2, VH * .5, Math.min(VW, VH) * .35, VW / 2, VH * .5, Math.max(VW, VH) * .75); v.addColorStop(0, 'rgba(60,20,80,0)'); v.addColorStop(1, night ? 'rgba(20,10,60,.38)' : 'rgba(80,30,90,.22)'); c.fillStyle = v; c.fillRect(0, 0, VW, VH);
@@ -767,6 +775,8 @@ function kedimOpts(t) {
 function drawKedimRoom(c, t) {
   var kp = kPos(), o = kedimOpts(t), jy = 0;
   if (G.reactT > 0 && (G.react === 'happy' || G.react === 'laugh')) jy = -Math.abs(Math.sin(G.reactT * 9)) * 14;
+  var ao = c.createRadialGradient(kp.x, kp.y, 4, kp.x, kp.y, 80 * kp.s); ao.addColorStop(0, 'rgba(40,20,60,.32)'); ao.addColorStop(1, 'rgba(40,20,60,0)'); c.fillStyle = ao; c.save(); c.translate(kp.x, kp.y); c.scale(1, .22); c.translate(-kp.x, -kp.y); c.beginPath(); c.arc(kp.x, kp.y, 80 * kp.s, 0, TAU); c.fill(); c.restore();
+  if (jy < 0) o.squash = Math.max(o.squash || 0, jy > -4 ? .5 : -.25);
   var gm = drawKedim(c, kp.x, kp.y + jy, o);
   KG = { x: kp.x, y: kp.y, hx: kp.x, hy: kp.y + gm.headY * kp.s, hr: 44 * kp.s, mx: kp.x, my: kp.y + gm.mouthY * kp.s, by: kp.y + gm.bodyY * kp.s, top: kp.y + gm.top * kp.s, w: gm.w * kp.s };
   G.bubbles.forEach(function (b) { var x = kp.x + b.x * kp.s, y = kp.y + b.y * kp.s, r = b.r * (b.pop ? 1 + (1 - b.pop) * .6 : 1); c.globalAlpha = b.pop ? Math.max(0, b.pop) : 1; ell(c, x, y, r, r); c.fillStyle = 'rgba(255,255,255,.6)'; c.fill(); c.strokeStyle = 'rgba(150,200,255,.95)'; c.lineWidth = 1.6; c.stroke(); c.fillStyle = '#fff'; ell(c, x - r * .35, y - r * .35, r * .25, r * .25); c.fill(); c.globalAlpha = 1; });
@@ -798,7 +808,7 @@ function update(dt) {
     if (G.st === 'room' && checkStage()) showStage();
   }
   G.slide *= Math.pow(.0005, dt); if (Math.abs(G.slide) < .002) G.slide = 0;
-  G.blinkT -= dt; if (G.blinkT < 0) { G.blink = .12; G.blinkT = rnd(2, 5); } G.blink -= dt;
+  G.blinkT -= dt; if (G.blinkT < 0) { G.blink = .12; G.blinkT = Math.random() < .25 ? .22 : rnd(2, 5); } G.blink -= dt;
   G.reactT -= dt; G.talk -= dt; G.listen -= dt; G.wet -= dt; G.sq *= Math.pow(.002, dt);
   if (G.eat > 0) { var pe = G.eat; G.eat -= dt; if (G.eat <= 0) finishEat(); else if ((G.eat * 4 | 0) !== (pe * 4 | 0) && KG) { AU.sfx('chomp'); burst(KG.mx, KG.my, 4, ['#e0a060', '#c9803a', '#fff3a0'], { s: 4, g: 500, vy: rnd(-120, -40) }); } }
   if (G.shower > 0) { G.shower -= dt; if (G.bubbles.length) { var b = G.bubbles[Math.random() * G.bubbles.length | 0]; if (!b.pop) b.pop = 1; } if (G.shower <= 0) finishShower(); }
