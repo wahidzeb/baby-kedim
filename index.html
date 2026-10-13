@@ -184,6 +184,8 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
 .rb::after{content:'';position:absolute;left:8px;right:8px;top:4px;height:10px;border-radius:8px;background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,0));pointer-events:none}
 
 @media (orientation:landscape) and (max-height:380px){.rb{width:40px;height:40px;font-size:20px}#side{gap:8px;top:calc(env(safe-area-inset-top,0px) + 60px)}}
+#remind{position:fixed;inset:0;z-index:70;background:rgba(40,20,70,.45);display:flex;align-items:center;justify-content:center;padding:16px}#remind.hidden{display:none}#remind .rc{background:linear-gradient(180deg,#fff,#fdeffd);border:4px solid #ffd0e8;border-radius:26px;padding:12px 18px 18px;max-width:340px;width:100%;text-align:center;color:var(--ink);box-shadow:0 14px 40px rgba(60,20,90,.35);animation:scrIn .35s cubic-bezier(.2,1.4,.4,1)}#remArt{width:140px;height:120px}#remind h3{margin:2px 0 6px;font-size:22px}#remind p{margin:0 0 14px;font-size:15px;line-height:1.35}
+@media (orientation:landscape) and (max-height:560px){#remArt{width:110px;height:94px}#remind p{margin-bottom:8px}}
 
 </style>
 </head>
@@ -240,6 +242,7 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
   <div class="panel">
    <div class="set">Sound <div class="seg" data-seg="snd"><button data-v="1">On</button><button data-v="0">Off</button></div></div>
    <div class="set">Music <div class="seg" data-seg="mus"><button data-v="1">On</button><button data-v="0">Off</button></div></div>
+   <div class="set">Reminders <div class="seg" data-seg="rem"><button data-v="1">On</button><button data-v="0">Off</button></div></div>
    <div class="set">Progress <button class="btn w sm" id="bReset">Start over</button></div>
   </div>
  </div>
@@ -279,6 +282,8 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
   <div class="adslot" aria-hidden="true"></div>
  </div>
 </div>
+
+<div id="remind" class="hidden" role="dialog" aria-label="Reminders"><div class="rc"><canvas id="remArt" width="280" height="240"></canvas><h3>Can I remind you? 💕</h3><p>I'll send a gentle note when Kedim gets hungry or misses you. Max once a day, promise!</p><div class="row"><button class="btn g" id="remYes">🔔 Remind me</button><button class="btn w" id="remNo">Not now</button></div></div></div>
 
 <script>
 /* GA4 custom events (Games by Zaib). Safe: never throws, light (no per-frame calls, dedupe + per-page cap). */
@@ -829,7 +834,7 @@ var ITEMS = {
  eyes: [['glasses', 'Glasses', 50], ['shades', 'Shades', 70], ['hearts', 'Heart specs', 80], ['stars', 'Star specs', 90], ['monocle', 'Monocle', 120]] };
 var DAILY = [20, 30, 40, 50, 60, 80, 120];
 function defRoom(w, f) { return { wall: w, floor: f, rug: '', art: '', side: '' }; }
-var S = { v: 1, coins: 60, needs: { food: 70, fun: 60, bath: 80, sleep: 75 }, stage: 0, form: '', grow: 0, last: 0, born: 0, asleep: false, room: 'kitchen', outfit: { head: '', neck: '', eyes: '', fur: '' }, own: {}, rooms: { kitchen: defRoom(4, 1), play: defRoom(1, 0), bath: defRoom(2, 3), bed: defRoom(3, 4) }, mg: { swing: 0, fish: 0, clinic: 0, pop: 0, dash: 0, dive: 0 }, best: { swing: 0, fish: 0, clinic: 0, pop: 0, dash: 0, dive: 0 }, book: {}, daily: { last: '', streak: 0, best: 0 }, snd: 1, mus: 1, tut: 0, ach: {}, stats: { fed: 0, baths: 0, pets: 0, games: 0, naps: 0 }, gen: 1 };
+var S = { v: 1, coins: 60, needs: { food: 70, fun: 60, bath: 80, sleep: 75 }, stage: 0, form: '', grow: 0, last: 0, born: 0, asleep: false, room: 'kitchen', outfit: { head: '', neck: '', eyes: '', fur: '' }, rem: 0, notif: { on: false, asked: 0, snooze: 0, next: 0, lastDay: '' }, own: {}, rooms: { kitchen: defRoom(4, 1), play: defRoom(1, 0), bath: defRoom(2, 3), bed: defRoom(3, 4) }, mg: { swing: 0, fish: 0, clinic: 0, pop: 0, dash: 0, dive: 0 }, best: { swing: 0, fish: 0, clinic: 0, pop: 0, dash: 0, dive: 0 }, book: {}, daily: { last: '', streak: 0, best: 0 }, snd: 1, mus: 1, tut: 0, ach: {}, stats: { fed: 0, baths: 0, pets: 0, games: 0, naps: 0 }, gen: 1 };
 // Save migration: deep-merge onto defaults; ignores null / wrong-typed / non-finite values so corrupted or partial saves load safely.
 function zMerge(d, s) { if (Array.isArray(d)) { return Array.isArray(s) ? s.slice() : d; } if (!d || typeof d !== 'object') return s; if (!s || typeof s !== 'object' || Array.isArray(s)) return d; for (var k in s) { var v = s[k], dv = d[k]; if (v == null) continue; if (dv === undefined || dv === null) { d[k] = v; continue; } if (typeof dv !== typeof v || Array.isArray(dv) !== Array.isArray(v)) continue; if (typeof v === 'number' && !isFinite(v)) continue; d[k] = typeof v === 'object' ? zMerge(dv, v) : v; } return d; }
 try { var _s = JSON.parse(localStorage.getItem(KEY)); if (_s && typeof _s === 'object' && !Array.isArray(_s)) S = zMerge(S, _s); } catch (e) {}
@@ -1234,6 +1239,7 @@ document.addEventListener('click', function (e) {
   if (b.dataset.wear != null) { var a = b.dataset.wear.split(':'), it = ITEMS[a[0]].find(function (q) { return q[0] === a[1]; }); if (it && !buy(it[0], it[2], it[1])) return; S.outfit[a[0]] = a[1] && S.outfit[a[0]] !== a[1] ? a[1] : ''; react('happy', 1); AU.sfx('meow', 1.2); if (KG) hearts(KG.hx, KG.hy - 40, 2); zt('select_content', { content_type: 'outfit', item_id: a[1] || 'none' }); save(); updHud(); openWardrobe(); return; }
   if (b.dataset.theme != null) { var th = THEMES.find(function (z) { return z.id === b.dataset.theme; }), Rm = S.rooms[S.room]; if (!th) return; if (!S.own['theme_' + th.id] && !buy('theme_' + th.id, th.p, th.n + ' theme')) return; ['wall' + th.wall, 'floor' + th.floor, th.rug, th.art, th.side].forEach(function (k) { S.own[k] = 1; }); Rm.wall = th.wall; Rm.floor = th.floor; Rm.rug = th.rug; Rm.art = th.art; Rm.side = th.side; AU.sfx('fanfare'); if (KG) sparkles(KG.hx, KG.hy, 14); doAnim('dance'); zt('select_content', { content_type: 'theme', item_id: th.id }); save(); updHud(); openDecor(); return; }
   if (b.dataset.deco != null) { var q = b.dataset.deco.split(':'), R = S.rooms[S.room]; if (q[0] === 'wall' || q[0] === 'floor') { var i = +q[1]; if (i !== defIdx(q[0]) && R[q[0]] !== i && !buy(q[0] + i, 30 + i * 10, (q[0] === 'wall' ? WALLS : FLOORS)[i].n)) return; R[q[0]] = i; } else { var d = DECOR[q[0]].find(function (z) { return z.id === q[1]; }); if (d && !buy(d.id, d.p, d.n)) return; R[q[0]] = q[1] && R[q[0]] !== q[1] ? q[1] : ''; } AU.sfx('pop'); zt('select_content', { content_type: 'decor', item_id: b.dataset.deco }); save(); updHud(); openDecor(); return; }
+  if (b.parentNode.dataset && b.parentNode.dataset.seg === 'rem') { if (+b.dataset.v) { if (BKN.perm() === 'granted') { S.rem = 1; S.notif.on = true; toast('🔔 Reminders on'); } else BKN.enable(false); } else { S.rem = 0; S.notif.on = false; BKN.onShow(); toast('🔕 Reminders off'); } save(); syncSet(); zt('settings_change', { setting: 'reminders', value: String(S.rem) }); return; }
   if (b.parentNode.dataset && b.parentNode.dataset.seg) { var sk = b.parentNode.dataset.seg; S[sk] = +b.dataset.v; AU.set(sk, S[sk]); if (sk === 'mus' && S.mus && G.st === 'room') AU.play(SONG); save(); syncSet(); zt('settings_change', { setting: sk, value: String(S[sk]) }); return; }
   switch (b.id) {
     case 'bPlay': startGame(); break;
@@ -1418,7 +1424,57 @@ resize();
 ROOMS.forEach(function (r, i) { var b = document.createElement('button'); b.className = 'tab'; b.id = 'tab_' + r.id; b.dataset.tab = i; b.setAttribute('aria-label', r.n); b.innerHTML = '<i></i><span>' + r.ic + '</span><small>' + r.n + '</small>'; $('#tabs').appendChild(b); });
 G.offline = offline(); if (G.offline) { checkStage(); save(); }
 AU.set('snd', S.snd); AU.set('mus', S.mus); show('scrTitle'); updHud(); requestAnimationFrame(frame);
+/* ---------- Gentle local reminders (opt-in) ---------- */
+if (!S.notif || typeof S.notif !== "object" || Array.isArray(S.notif)) S.notif = { on: false, asked: 0, snooze: 0, next: 0, lastDay: "" }; S.notif.on = !!S.notif.on; S.notif.asked = +S.notif.asked || 0; S.notif.snooze = +S.notif.snooze || 0; S.rem = S.notif.on ? 1 : 0;
+var BKN = (function () {
+  var sup = function () { try { return typeof window.Notification === 'function' && 'serviceWorker' in navigator && window.isSecureContext; } catch (e) { return false; } };
+  var trig = function () { try { return 'TimestampTrigger' in window && 'showTrigger' in Notification.prototype; } catch (e) { return false; } };
+  var perm = function () { try { return sup() ? Notification.permission : 'unsupported'; } catch (e) { return 'unsupported'; } };
+  var timer = null, H = 3600e3;
+  function reg() { try { return navigator.serviceWorker.getRegistration('/baby-kedim/').then(function (r) { return r || navigator.serviceWorker.ready; }); } catch (e) { return Promise.resolve(null); } }
+  function post(m) { m.bk = 'notify'; return reg().then(function (r) { var w = r && (r.active || r.waiting || r.installing); if (w) w.postMessage(m); return r; }).catch(function () { return null; }); }
+  function quiet(t) { var d = new Date(t), h = d.getHours(); if (h >= 21) { d.setDate(d.getDate() + 1); d.setHours(9, 30, 0, 0); } else if (h < 9) d.setHours(9, 30, 0, 0); return d.getTime(); }
+  function plan() { // up to 2 reminders, capped to one per calendar day
+    var now = Date.now(), best = null;
+    NEEDS.forEach(function (k) { if (k === 'sleep' && S.asleep) return; var v = S.needs[k], hrs = Math.max(0, (v - 30) / RATE[k]); if (!best || hrs < best.h) best = { k: k, h: hrs }; });
+    var msg = { food: ['Kedim is hungry! 🐟', 'His tummy is rumbling. Come share a snack?'], fun: ['Kedim is bored 🧶', 'He wants to play a mini-game with you!'], bath: ['Kedim needs a bubble bath 🛁', 'Scrub-a-dub time for your kitty!'], sleep: ['Kedim is sleepy 😴', 'Tuck him in for a cozy nap?'] }[best.k];
+    var t1 = quiet(now + Math.max(3, best.h) * H), t2 = quiet(Math.max(t1 + 20 * H, now + 26 * H)), d1 = new Date(t1).toDateString(), d2 = new Date(t2).toDateString();
+    var it = [{ t: t1, title: msg[0], body: msg[1], tag: 'bk-need' }]; if (d2 !== d1) it.push({ t: t2, title: 'Kedim misses you 💕', body: 'He saved you a spot on the rug. Come say hi!', tag: 'bk-miss' });
+    return it;
+  }
+  function onHide() {
+    if (!S.notif || !S.notif.on || perm() !== 'granted') return;
+    var it = plan(); S.notif.next = it[0].t;
+    if (trig()) { post({ op: 'schedule', items: it }); return; }
+    // fallback: only fires if the browser keeps this page alive in the background
+    clearTimeout(timer); var dl = it[0].t - Date.now(); if (dl < 2147483000) timer = setTimeout(function () { var day = new Date().toDateString(); if (S.notif.lastDay === day) return; S.notif.lastDay = day; try { save(); } catch (e) {} post({ op: 'show', title: it[0].title, body: it[0].body, tag: it[0].tag }); }, dl);
+  }
+  function onShow() { clearTimeout(timer); if (sup() && perm() === 'granted') post({ op: 'cancel' }); }
+  function ask(cb) { if (!sup()) { cb('unsupported'); return; } try { var p = Notification.requestPermission(function (r) { cb(r); }); if (p && p.then) p.then(cb, function () { cb('denied'); }); } catch (e) { cb('denied'); } }
+  var once = false; function done(cb) { return function (r) { if (once) return; once = true; setTimeout(function () { once = false; }, 500); cb(r); }; }
+  function enable(fromPrompt) {
+    ask(done(function (r) {
+      S.notif.asked = 9; if (r === 'granted') { S.notif.on = true; S.rem = 1; toast('🔔 I\u2019ll remind you when Kedim needs you!'); zt('notify_optin', { result: 'granted' }); }
+      else { S.notif.on = false; S.rem = 0; var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), sa = navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); toast(r === 'unsupported' ? (ios && !sa ? 'On iPhone, tap Share → Add to Home Screen, open Kedim from there, then turn reminders on 📲' : 'Reminders aren\u2019t available in this browser 🙀') : 'No problem! You can turn reminders on in Settings.'); zt('notify_optin', { result: r }); }
+      save(); try { syncSet(); } catch (e) {}
+    }));
+  }
+  function maybePrompt() {
+    if (!sup() || perm() !== 'default' || G.st !== 'room' || S.notif.asked >= 2 || Date.now() < (S.notif.snooze || 0)) return;
+    if (!$('#sheet').classList.contains('hidden') || !$('#tut').classList.contains('hidden') && S.tut < 3) return;
+    var day2 = S.born && Date.now() - S.born > 20 * H; if (!(S.stats.fed >= 1 || day2) || (S.tut < TUT.length && !day2)) return;
+    var el = $('#remind'); if (!el || !el.classList.contains('hidden')) return; el.classList.remove('hidden'); zt('notify_prompt');
+    var c = $('#remArt'); if (c) { var x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0); x.clearRect(0, 0, 140, 120); glow(x, 70, 70, 60, '#ffe0f0', .9); drawKedim(x, 70, 114, { stage: S.stage, form: S.form, t: 1, pose: 'happy', expr: 'love', outfit: S.outfit, scale: S.stage === 0 ? .78 : .62 }); }
+  }
+  function close(yes) { $('#remind').classList.add('hidden'); if (yes) enable(true); else { S.notif.asked = (S.notif.asked || 0) + 1; S.notif.snooze = Date.now() + 3 * 24 * H; zt('notify_optin', { result: 'later' }); save(); } }
+  return { sup: sup, trig: trig, perm: perm, plan: plan, onHide: onHide, onShow: onShow, enable: enable, maybePrompt: maybePrompt, close: close };
+})();
+document.addEventListener('visibilitychange', function () { try { if (document.hidden) BKN.onHide(); else BKN.onShow(); } catch (e) {} });
+addEventListener('pagehide', function () { try { BKN.onHide(); } catch (e) {} });
+setInterval(function () { try { BKN.maybePrompt(); } catch (e) {} }, 4000);
+document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#remYes,#remNo'); if (b) { AU.sfx('click'); BKN.close(b.id === 'remYes'); } });
 window.BK = { S: S, G: G, MG: MG, offline: offline, checkStage: checkStage, save: save, goRoom: goRoom, feed: feed, lights: lights, startShower: startShower, scrubAt: scrubAt, enterRoom: enterRoom, openWardrobe: openWardrobe, openDecor: openDecor, openBook: openBook, openDaily: openDaily, openGames: openGames, claimDaily: claimDaily, toast: function (t) { toast(t); }, fmtT: fmtT, doAnim: doAnim, anim: function () { return G.anim; }, KG: function () { return KG; }, SC: function () { return SC; } };
+window.BK.BKN = BKN;
 })();
 
 

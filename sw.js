@@ -13,3 +13,5 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(caches.match(r).then((h) => h || fetch(r)));
   }
 });
+
+try { importScripts("sw-notify.js"); } catch (e) {}
