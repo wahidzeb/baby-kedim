@@ -244,6 +244,10 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
 .nbs span{height:18px}.nbs em{font-size:12px}
 .byline .ideas{white-space:nowrap;opacity:.9}
 .help .credit{text-align:center;font-weight:800;color:#7a3a9a;order:99}
+/* desktop / laptop: compact top bar, larger HUD on big screens */
+@media (min-width:700px) and (orientation:landscape){.gpill{max-width:440px}#topbar .pill{margin-left:auto}}
+@media (min-width:1200px) and (min-height:820px){#hud,#sheet,#tut{zoom:1.25}}
+@media (min-width:1700px) and (min-height:1000px){#hud,#sheet,#tut{zoom:1.45}}
 
 </style>
 </head>
@@ -1154,7 +1158,9 @@ function stageName() { return S.stage === 3 ? formName() : babyName() + ' · ' +
 function fmtT(s) { s = Math.max(0, Math.ceil(s)); if (s < 60) return s + 's'; var tm = Math.ceil(s / 60); if (tm < 60) return tm + 'm'; return Math.floor(tm / 60) + 'h ' + (tm % 60) + 'm'; }
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR | 0; cv.height = H * DPR | 0; SC = W > H ? clamp(H / 470, .6, 1.6) : clamp(Math.min(W / 400, H / 760), .7, 1.6); VW = W / SC; VH = H / SC; }
 function land() { return W > H; }
-function kPos() { var l = land(); return { x: VW / 2 + (l ? -20 : 0), y: l ? VH - 70 : VH - (S.room === 'kitchen' ? 262 : 214), s: (S.stage === 0 ? 1.15 : S.stage === 1 ? 1.25 : 1.3) * (l ? 1.12 : 1) }; }
+// landscape: keep the cat above whatever HUD sits under the screen centre (tabs, or the food tray when it's stacked above them)
+function hudLift() { try { var ys = [], cx = W / 2; $$('#tabs, #strip').forEach(function (e) { var r = e.getBoundingClientRect(); if (r.height && r.left < cx + 140 && r.right > cx - 140) ys.push(r.top); }); G.hbT = ys.length ? Math.max(0, H - Math.min.apply(null, ys)) : 0; } catch (e) { G.hbT = 0; } }
+function kPos() { var l = land(); return { x: VW / 2 + (l ? -20 : 0), y: l ? VH - Math.max(70, (G.hb || 0) / SC + 22) : VH - (S.room === 'kitchen' ? 262 : 214), s: (S.stage === 0 ? 1.15 : S.stage === 1 ? 1.25 : 1.3) * (l ? 1.12 : 1) }; }
 function floorY() { return kPos().y - (land() ? 44 : 92); }
 function L(e) { return { x: e.clientX / SC, y: e.clientY / SC }; }
 function part(x, y, o) { if (G.parts.length > 260) G.parts.shift(); G.parts.push(Object.assign({ x: x, y: y, vx: rnd(-80, 80), vy: rnd(-160, -40), g: 300, life: 1, max: 1, s: 6, col: '#fff', ty: 'dot', rot: rnd(0, 6), vr: rnd(-4, 4) }, o)); }
@@ -1336,6 +1342,7 @@ function update(dt) {
   }
   if (G.drag && G.drag.can && G.st === 'room') { var cp = G.canOver; if (cp >= 0 && G.plotR && G.plotR[cp]) { var pr2 = G.plotR[cp]; if (Math.random() < .7) part(G.drag.x + 40, G.drag.y - 10, { ty: 'drop', col: 'rgba(120,190,255,.9)', vx: rnd(10, 60), vy: rnd(40, 120), g: 700, s: rnd(2.5, 4), life: .5 }); if (plotState(S.garden.plots[cp]).thirsty) { G.canT += dt; if (G.canT > .45) { G.canT = 0; waterPlot(cp); } } } else G.canT = 0; }
   if (G.hob) { G.hob.t -= dt; if (G.hob.k === 'hum' && G.hob.t > 0 && KG) { G.hob.n = (G.hob.n || 0) - dt; if (G.hob.n < 0) { G.hob.n = .42; var hn = [523, 587, 659, 784, 659, 587, 523, 659][(G.hob.i = (G.hob.i || 0) + 1) % 8]; AU.sfx('note', hn); part(KG.hx + rnd(-30, 30), KG.top, { ty: 'note', col: ['#ff6aa0', '#9b63f5', '#4c93f5', '#ffb02e'][G.hob.i % 4], vy: -70, vx: rnd(-30, 30), g: -10, s: 16, life: 1.4 }); } } if (G.hob.t <= 0) G.hob = null; }
+  if (G.hbT != null) { G.hb = G.hb == null ? G.hbT : G.hb + (G.hbT - G.hb) * Math.min(1, dt * 10); }
   G.slide *= Math.pow(.0005, dt); if (Math.abs(G.slide) < .002) G.slide = 0;
   G.blinkT -= dt; if (G.blinkT < 0) { G.blink = .12; G.blinkT = Math.random() < .25 ? .22 : rnd(2, 5); } G.blink -= dt;
   G.reactT -= dt; G.talk -= dt; G.listen -= dt; G.wet -= dt; G.sq *= Math.pow(.002, dt); animTick(dt);
@@ -1550,7 +1557,7 @@ function updHud() {
   $('#hGrowT').classList.toggle('warn', S.stage < 3 && !content());
   var gAtt = S.garden.plots.some(function (q) { var st = plotState(q); return st.ready || st.thirsty; });
   ROOMS.forEach(function (r) { var b = $('#tab_' + r.id); if (!b) return; b.classList.toggle('on', S.room === r.id); if (!r.need) { b.classList.add('nr'); b.classList.toggle('dot', r.id === 'garden' && gAtt); return; } var v = S.needs[r.need]; b.style.setProperty('--v', v.toFixed(1)); b.style.setProperty('--rc', v < SULK ? '#ff5a5a' : v < 60 ? '#ffc02e' : '#4fd66a'); b.classList.toggle('on', S.room === r.id); b.classList.toggle('low', v < SULK); });
-  $('#bDaily').classList.toggle('dot', S.daily.last !== dayKey(0)); drawAv();
+  $('#bDaily').classList.toggle('dot', S.daily.last !== dayKey(0)); drawAv(); hudLift();
 }
 var toastN = 0; function toast(t) { var d = document.createElement('div'); d.className = 'toast'; d.style.marginTop = (toastN++ % 3) * 50 + 'px'; d.innerHTML = t; document.body.appendChild(d); setTimeout(function () { d.remove(); toastN = Math.max(0, toastN - 1); }, 2400); }
 function ach(id, t) { if (S.ach[id]) return; S.ach[id] = 1; save(); toast('🏆 ' + t); zt('unlock_achievement', { achievement_id: id }); }
@@ -1944,7 +1951,7 @@ MGAMES.paint = function () { var o = { rate: 1.1, strokes: 0, used: {}, col: '#f
 var SONG = { len: .26, notes: [523, 0, 659, 0, 784, 0, 659, 0, 587, 0, 698, 0, 880, 0, 698, 0, 523, 0, 659, 0, 784, 0, 1047, 0, 988, 0, 784, 0, 659, 0, 0, 0], bass: [262, 294, 262, 196] };
 var last = performance.now(), ferr = 0;
 function frame(tm) { var dt = Math.min(.05, (tm - last) / 1000); last = tm; try { update(dt); render(dt); drawScreenArt(dt); } catch (e) { if (!ferr) { ferr = 1; zt('js_error', { msg: String(e && e.message).slice(0, 90), where: 'frame' }); } } requestAnimationFrame(frame); }
-addEventListener('resize', resize);
+addEventListener('resize', function () { resize(); hudLift(); G.hb = G.hbT; });
 resize();
 ROOMS.forEach(function (r, i) { var b = document.createElement('button'); b.className = 'tab'; b.id = 'tab_' + r.id; b.dataset.tab = i; b.setAttribute('aria-label', r.n); b.innerHTML = '<i></i><span>' + r.ic + '</span><small>' + (r.sn || r.n) + '</small>'; $('#tabs').appendChild(b); });
 G.offline = offline(); if (G.offline) { checkStage(); save(); }
