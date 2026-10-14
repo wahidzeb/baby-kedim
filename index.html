@@ -248,6 +248,15 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
 @media (min-width:700px) and (orientation:landscape){.gpill{max-width:440px}#topbar .pill{margin-left:auto}}
 @media (min-width:1200px) and (min-height:820px){#hud,#sheet,#tut{zoom:1.25}}
 @media (min-width:1700px) and (min-height:1000px){#hud,#sheet,#tut{zoom:1.45}}
+/* fixes 2026-10 */
+.ico{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.22em}
+.tab span .ico{width:1.3em;height:1.3em;vertical-align:-.2em}
+#strip,#strip *,.si,.si canvas,#sheet canvas,#sheet img,#tabs,#side,canvas{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+@media (orientation:landscape) and (max-height:560px){
+ #strip[data-room=kitchen]{display:grid;grid-template-columns:repeat(3,58px);grid-auto-rows:58px;gap:6px;max-height:none;align-content:end}
+ #strip[data-room=kitchen] .si.food{width:58px;height:58px}
+ #strip[data-room=kitchen] .si.food canvas{width:46px;height:39px}
+}
 
 </style>
 </head>
@@ -290,7 +299,7 @@ body{background:radial-gradient(ellipse at 50% 30%,#fff0f6,#ffc4dc 60%,#d9a8ff)}
   <div class="topbar"><button class="btn w ib" data-go="back" aria-label="Back">&#8592;</button><h2>How to play</h2><div style="width:50px"></div></div>
   <div class="panel help">
    <p>🐾 Baby Kedim needs <b>food, fun, a bath and sleep</b>. The rings on the room buttons show how he feels.</p>
-   <p>🍽️ <b>Kitchen:</b> drag a food to Kedim's mouth.</p>
+   <p>🍴 <b>Kitchen:</b> drag a food to Kedim's mouth.</p>
    <p>🛁 <b>Bathroom:</b> rub the soap all over him, then tap Rinse.</p>
    <p>🌙 <b>Bedroom:</b> tap Lights off for a nap. He wakes up when rested.</p>
    <p>🛋️ <b>Living Room:</b> pet him for purrs, throw the ball, talk to him, and play <b>6 mini-games</b> for coins.</p>
@@ -1054,7 +1063,8 @@ var RATE = { food: 9, fun: 11, bath: 6, sleep: 7 };
 var FLOOR_OFF = 20, SULK = 35, GROW_MIN = 30;
 var STAGES = [{ n: 'Kitten', d: 600 }, { n: 'Kid', d: 86400 }, { n: 'Teen', d: 172800 }, { n: 'Adult', d: 0 }];
 var FORMS = { therapist: 'Therapist Kedim', snack: 'Snack-Swing Kedim', adventurer: 'Adventurer Kedim' };
-var ROOMS = [{ id: 'kitchen', n: 'Kitchen', sn: 'Kitchen', need: 'food', ic: '🍽️' }, { id: 'play', n: 'Living Room', sn: 'Living', need: 'fun', ic: '🛋️' }, { id: 'garden', n: 'Garden', sn: 'Garden', ic: '🌻' }, { id: 'hobby', n: 'Hobby Room', sn: 'Hobby', ic: '🎹' }, { id: 'bath', n: 'Bathroom', sn: 'Bath', need: 'bath', ic: '🛁' }, { id: 'bed', n: 'Bedroom', sn: 'Bed', need: 'sleep', ic: '🌙' }];
+var ICO_PLATE = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.6" fill="#fff" stroke="#7a5a9a" stroke-width="1.7"/><circle cx="12" cy="13" r="4.3" fill="#f3e8ff" stroke="#c9b3dd" stroke-width="1.2"/><path d="M2.6 3.5v4.2a1.1 1.1 0 0 0 2.2 0V3.5M3.7 3.5V21" stroke="#7a5a9a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M21.4 3.5c-1.6 1.1-1.9 3.8-1.9 6.6h1.9V21" stroke="#7a5a9a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+var ROOMS = [{ id: 'kitchen', n: 'Kitchen', sn: 'Kitchen', need: 'food', ic: ICO_PLATE }, { id: 'play', n: 'Living Room', sn: 'Living', need: 'fun', ic: '🛋️' }, { id: 'garden', n: 'Garden', sn: 'Garden', ic: '🌻' }, { id: 'hobby', n: 'Hobby Room', sn: 'Hobby', ic: '🎹' }, { id: 'bath', n: 'Bathroom', sn: 'Bath', need: 'bath', ic: '🛁' }, { id: 'bed', n: 'Bedroom', sn: 'Bed', need: 'sleep', ic: '🌙' }];
 var MGS = [
  { id: 'swing', n: 'Snack Swing', form: 'snack', d: 'Cut the rope so the treat swings into Kedim\'s mouth!', col: '#ff9a5a' },
  { id: 'fish', n: 'Fish Catch', form: 'snack', d: 'Slide to catch falling fish. Dodge old boots!', col: '#4c93f5' },
@@ -1332,7 +1342,7 @@ function render(dt) {
 }
 var hudT = 0, saveT = 0;
 function update(dt) {
-  G.t += dt;
+  G.t += dt; G.hintT = (G.hintT || 0) + dt; if (G.hintT > .3) { G.hintT = 0; if (G.st === 'room') tutHint(); }
   if (G.st === 'mg' && MG.cur) { MG.cur.update(dt); G.shake = Math.max(0, G.shake - dt * 3); }
   if (G.st === 'room' || G.st === 'mg') {
     var before = content(); decay(dt, 0); if (before && content()) addGrow(dt);
@@ -1370,18 +1380,20 @@ function feed(id) {
   if (S.needs.food >= 97) { react('no', 1); AU.sfx('bad'); toast("I'm full! 😺"); return; }
   if (S.coins < f.p) { toast('Need ' + f.p + ' coins. Play mini-games to earn more!'); AU.sfx('bad'); return; }
   if (f.p) { S.coins -= f.p; spendEv(f.p, 'food_' + id); }
-  G.eat = .9; G.eatFood = f; AU.sfx('gulp'); updHud();
+  G.eat = .9; G.eatFood = f; G.fedT = G.t; AU.sfx('gulp'); updHud(); tutHint();
 }
-function finishEat() { var f = G.eatFood; if (!f) return; G.eatFood = null; S.needs.food = Math.min(100, S.needs.food + f.f); if (f.fun) S.needs.fun = Math.min(100, S.needs.fun + f.fun); S.stats.fed++; react('happy', 1.2); AU.sfx('meow', 1.2); if (KG) { hearts(KG.hx, KG.hy - 40, 3); flyTxt('Yum! +' + f.f, KG.hx, KG.top - 10, '#ffd34a'); } if (!f.prod && !S.book['food_' + f.id]) { S.book['food_' + f.id] = 1; toast('📖 New sticker: ' + f.n + '!'); } careBonus(); tutStep('fed'); if (S.stats.fed === 20) ach('chef', 'Little chef: 20 meals'); save(); updHud(); }
+function finishEat() { var f = G.eatFood; if (!f) return; G.eatFood = null; S.needs.food = Math.min(100, S.needs.food + f.f); if (f.fun) S.needs.fun = Math.min(100, S.needs.fun + f.fun); S.stats.fed++; react('happy', 1.2); AU.sfx('meow', 1.2); if (KG) { hearts(KG.hx, KG.hy - 40, 3); flyTxt('Yum! +' + f.f, KG.hx, KG.top - 10, '#ffd34a'); } if (!f.prod && !S.book['food_' + f.id]) { S.book['food_' + f.id] = 1; toast('📖 New sticker: ' + f.n + '!'); } careBonus(); G.fedT = G.t; tutStep('fed'); tutHint(); if (S.stats.fed === 20) ach('chef', 'Little chef: 20 meals'); save(); updHud(); }
 function careBonus() { addGrow([0, 120, 240, 0][S.stage]); }
 function scrubAt(x, y) {
   if (!G.anim && Math.random() < .006) doAnim('sneeze');
   if (!KG || S.asleep) return false; var ks = kPos().s, dx = (x - KG.x) / ks, dy = (y - KG.y) / ks; if (Math.abs(dx) > 62 || dy > 5 || y < KG.top) return false;
-  if (G.bubbles.length < 48 && Math.random() < .55) G.bubbles.push({ x: dx + rnd(-8, 8), y: dy + rnd(-8, 8), r: rnd(5, 11) });
-  S.needs.bath = Math.min(100, S.needs.bath + .5); if (Math.random() < .2) AU.sfx('scrub'); if (Math.random() < .15) part(x, y, { ty: 'bub', s: rnd(4, 9), vy: rnd(-80, -30), g: -20, life: 1.2 });
+  G.scrubN = (G.scrubN || 0) + 1; if (G.bubbles.length < 48 && (G.scrubN % 2 === 1)) G.bubbles.push({ x: dx + rnd(-8, 8), y: dy + rnd(-8, 8), r: rnd(5, 11) });
+  S.needs.bath = Math.min(100, S.needs.bath + .25); if (Math.random() < .2) AU.sfx('scrub'); if (Math.random() < .15) part(x, y, { ty: 'bub', s: rnd(4, 9), vy: rnd(-80, -30), g: -20, life: 1.2 });
   if (Math.random() < .02) { react('happy', .6); AU.sfx('giggle'); }
   return true;
 }
+// walk the stroke in small steps so quick, short soap swipes still leave bubbles every few pixels
+function scrubLine(o, x, y) { var lx = o.slx == null ? x : o.slx, ly = o.sly == null ? y : o.sly, d = Math.hypot(x - lx, y - ly), n = Math.max(1, Math.ceil(d / 7)), hit = false; for (var i = 1; i <= n; i++) if (scrubAt(lx + (x - lx) * i / n, ly + (y - ly) * i / n)) hit = true; o.slx = x; o.sly = y; if (hit && !o.fb) { o.fb = 1; AU.sfx('scrub'); if (KG) part(x, y, { ty: 'bub', s: 8, vy: -60, g: -20, life: 1 }); } if (hit) tutHint(); return hit; }
 function startShower() { if (!canAct() || G.shower > 0) return; G.showerN = G.bubbles.length; G.shower = 2; G.wet = 3; AU.sfx('splash'); react('shock', .6); }
 function finishShower() { var had = G.showerN || 0; G.showerN = 0; G.bubbles.forEach(function (b) { b.pop = b.pop || 1; }); S.needs.bath = Math.min(100, S.needs.bath + 6 + had * .4); react('happy', 1.2); AU.sfx('meow', 1.15); if (KG) { sparkles(KG.hx, KG.hy, 12); flyTxt('Squeaky clean!', KG.hx, KG.top - 10, '#8fd8ff'); } AU.sfx('sparkle'); if (had > 8) { S.stats.baths++; careBonus(); if (S.stats.baths === 10) ach('clean', 'Bubble buddy: 10 baths'); tutStep('bath'); } save(); }
 function lights() { if (S.room !== 'bed') return; if (S.asleep) { wakeUp(false); return; } if (S.needs.sleep >= 96) { toast('Kedim is not sleepy yet!'); react('no', 1); AU.sfx('bad'); return; } S.asleep = true; G.pet = null; AU.purr(false); AU.sfx('click'); AU.sfx('yawn'); stripRefresh(); save(); }
@@ -1432,7 +1444,7 @@ function openSeeds(i) { G.seedFor = i == null ? -1 : i; var h = '<p class="note"
 function pickSeed(k) { if (!hasK(CROPS, k)) return; if (cropLock(k)) { toast('🔒 ' + CROPS[k].n + ' unlocks at garden level ' + CROPS[k].lvl); AU.sfx('bad'); return; } G.seed = k; var i = G.seedFor >= 0 && !S.garden.plots[G.seedFor].k ? G.seedFor : S.garden.plots.findIndex(function (p) { return !p.k; }); hideSheet(); if (i < 0) { toast('All beds are busy! Harvest first 🧺'); return; } if (plantPlot(i, k) && S.garden.plots.some(function (p) { return !p.k; })) setTimeout(function () { toast('Tap an empty bed to plant more ' + CROPS[k].e); }, 700); }
 function openFarm() { var g0 = S.garden, lv = gLvl(), nx = GLV[lv] != null ? GLV[lv] : null, h = '<div class="glv"><b>🌳 Garden level ' + lv + '</b><div class="gb"><i style="width:' + (nx == null ? 100 : Math.min(100, (g0.xp - GLV[lv - 1]) / (nx - GLV[lv - 1]) * 100)) + '%"></i></div><small>' + (nx == null ? 'Max level! 🌟' : g0.xp + ' / ' + nx + ' XP to level ' + (lv + 1)) + ' · ' + g0.h + ' harvests</small></div>';
   var any = false; h += '<h4>🧺 Basket</h4><div class="farm">';
-  CROPK.forEach(function (k) { var n = g0.inv[k] || 0; if (!n) return; any = true; var cr = CROPS[k]; h += '<div class="fr"><canvas width="112" height="112" data-art="prod:' + k + '"></canvas><div class="ft"><b>' + cr.n + ' ×' + n + '</b><small>' + (cr.food ? 'Food +' + cr.food : 'Fun +' + cr.fun) + '</small></div><button class="btn y sm" data-sell="' + k + '">Sell <span class="coin s"></span>' + cr.sell + '</button><button class="btn g sm" data-feedp="' + k + '">' + (cr.food ? 'Feed 🍽️' : 'Gift 💐') + '</button></div>'; });
+  CROPK.forEach(function (k) { var n = g0.inv[k] || 0; if (!n) return; any = true; var cr = CROPS[k]; h += '<div class="fr"><canvas width="112" height="112" data-art="prod:' + k + '"></canvas><div class="ft"><b>' + cr.n + ' ×' + n + '</b><small>' + (cr.food ? 'Food +' + cr.food : 'Fun +' + cr.fun) + '</small></div><button class="btn y sm" data-sell="' + k + '">Sell <span class="coin s"></span>' + cr.sell + '</button><button class="btn g sm" data-feedp="' + k + '">' + (cr.food ? 'Feed ' + ICO_PLATE : 'Gift 💐') + '</button></div>'; });
   h += any ? '</div><button class="btn y sm" id="bSellAll" style="margin:10px auto 0;display:flex">Sell everything</button>' : '</div><p class="note">Your basket is empty. Harvest ripe plants to fill it! 🧺</p>';
   h += '<p class="note">Farm loop: plant → water → harvest → sell for coins or feed your kitty, then buy better seeds.</p>'; sheet('🏪 Farm Stand', h, 'farm'); }
 function sellCrop(k, all) { var n = S.garden.inv[k] || 0; if (!n || !hasK(CROPS, k)) return 0; var q = all ? n : 1, v = q * CROPS[k].sell; S.garden.inv[k] = n - q; if (!S.garden.inv[k]) delete S.garden.inv[k]; S.coins += v; earnEv(v, 'sell_' + k); return v; }
@@ -1461,7 +1473,7 @@ function readPoem() { if (!G.poem) return; var lines = poemLines(false), txt = l
 function catAvatar(cv2, ct) { var x = cv2.getContext('2d'), w = cv2.width; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, w, w); x.save(); x.scale(w / 80, w / 80); x.lineJoin = x.lineCap = 'round'; drawKedim(x, 40, ct.stage === 0 ? 118 : 132, { stage: ct.stage, form: ct.form, scale: ct.stage === 0 ? .9 : .78, t: 0, expr: ct.asleep ? 'sleep' : 'happy', outfit: ct.outfit, pose: ct.asleep ? 'sleep' : 'idle' }); x.restore(); }
 function drawAv() { var c2 = $('#avC'); if (!c2) return; syncCat(); var ct = S.cats[S.cur], key = [S.cur, S.cats.length, ct.stage, ct.form, ct.asleep, ct.outfit.fur, ct.outfit.head, ct.outfit.neck, ct.outfit.eyes].join('|'); if (G.avKey === key) return; G.avKey = key; catAvatar(c2, ct); $('#avN').textContent = S.cats.length > 1 ? (S.cur + 1) + '/' + S.cats.length : '+'; }
 function syncArt() { ART_COAT = S.artFur ? (S.outfit.fur || '') : ''; G.avKey = ''; try { var k = COATS.find(function (q) { return q.id === (S.outfit.fur || ''); }) || COATS[0], el = document.querySelector('link[rel=icon]'); if (el) el.href = 'data:image/svg+xml,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M12 30 10 6l16 12h12L54 6l-2 24a22 20 0 1 1-40 0z' fill='" + k.b + "' stroke='" + k.ol + "' stroke-width='2.5'/><circle cx='24' cy='34' r='6' fill='#c6ef3e'/><circle cx='40' cy='34' r='6' fill='#c6ef3e'/><path d='M29 43h6l-3 3z' fill='#ff8fb0'/></svg>"); } catch (e) {} }
-function needBars(ct) { return '<div class="nbs">' + NEEDS.map(function (k) { var v = ct.needs[k]; return '<span title="' + k + '"><em>' + { food: '🍽️', fun: '🧶', bath: '🫧', sleep: '🌙' }[k] + '</em><i style="width:' + v.toFixed(0) + '%;background:' + (v < SULK ? '#ff5a5a' : v < 60 ? '#ffc02e' : '#4fd66a') + '"></i></span>'; }).join('') + '</div>'; }
+function needBars(ct) { return '<div class="nbs">' + NEEDS.map(function (k) { var v = ct.needs[k]; return '<span title="' + k + '"><em>' + { food: ICO_PLATE, fun: '🧶', bath: '🫧', sleep: '🌙' }[k] + '</em><i style="width:' + v.toFixed(0) + '%;background:' + (v < SULK ? '#ff5a5a' : v < 60 ? '#ffc02e' : '#4fd66a') + '"></i></span>'; }).join('') + '</div>'; }
 function catStage(ct) { return ct.stage === 3 ? (FORMS[ct.form] || 'Adult Kedim').replace('Kedim', '').trim() + ' · Adult' : STAGES[ct.stage].n; }
 function openCats(ren) { syncCat(); var h = '<div class="cats">';
   S.cats.forEach(function (ct, i) { var on = i === S.cur; h += '<div class="catr' + (on ? ' on' : '') + '"><canvas width="132" height="132" data-art="cat:' + i + '"></canvas><div class="ci">' + (ren === i ? '<div class="ren"><input id="renIn" maxlength="12" value="' + esc(ct.name) + '" aria-label="Cat name"><button class="btn g sm" id="bRenOk" data-i="' + i + '">Save</button></div>' : '<b>' + esc(ct.name) + (ct.asleep ? ' 💤' : '') + '</b>') + '<small>' + catStage(ct) + '</small>' + needBars(ct) + '</div><div class="cb">' + (on ? '<span class="act">Active</span>' : '<button class="btn p sm" data-cat="' + i + '">Play</button>') + (ren === i ? '' : '<button class="ib2" data-ren="' + i + '" aria-label="Rename">✏️</button>') + '</div></div>'; });
@@ -1502,17 +1514,17 @@ cv.addEventListener('pointerdown', function (e) {
 addEventListener('pointermove', function (e) {
   var p = L(e);
   if (G.st === 'mg') { if (MG.cur && MG.cur.input) MG.cur.input('move', p.x, p.y); return; }
-  if (G.drag) { G.drag.x = p.x; G.drag.y = p.y - 34; if (Math.hypot(p.x - (G.drag.sx || p.x), p.y - (G.drag.sy || p.y)) > 14) G.drag.moved = 1; if (G.drag.soap && scrubAt(G.drag.x, G.drag.y + 10)) G.drag.scrubbed = 1; if (G.drag.can) { var co = -1, hx = G.drag.x + 34, hy = G.drag.y + 30; (G.plotR || []).forEach(function (r) { if (hx > r.x && hx < r.x + r.w && hy > r.y && hy < r.y + r.h + 20) co = r.i; }); G.canOver = co; } return; }
+  if (G.drag) { G.drag.x = p.x; G.drag.y = p.y - 34; if (Math.hypot(p.x - (G.drag.sx || p.x), p.y - (G.drag.sy || p.y)) > 14) G.drag.moved = 1; if (G.drag.soap && scrubLine(G.drag, G.drag.x, G.drag.y + 10)) G.drag.scrubbed = 1; if (G.drag.can) { var co = -1, hx = G.drag.x + 34, hy = G.drag.y + 30; (G.plotR || []).forEach(function (r) { if (hx > r.x && hx < r.x + r.w && hy > r.y && hy < r.y + r.h + 20) co = r.i; }); G.canOver = co; } return; }
   if (!press || e.pointerId !== press.id) return;
   if (Math.hypot(p.x - press.sx, p.y - press.sy) > 10) press.moved = 1;
-  if (press.scrub) scrubAt(p.x, p.y);
+  if (press.scrub) scrubLine(press, p.x, p.y);
   if (G.pet) G.pet.dist += Math.hypot(p.x - press.x, p.y - press.y);
   press.x = p.x; press.y = p.y;
 });
 addEventListener('pointerup', function (e) {
   var p = L(e);
   if (G.st === 'mg') { if (MG.cur && MG.cur.input) MG.cur.input('up', p.x, p.y); return; }
-  if (G.drag) { var d = G.drag; G.drag = null; if (d.can) { G.canOver = -1; if (!d.moved) waterAll(); return; } if (d.food && KG && Math.hypot(d.x - KG.mx, d.y - KG.my) < 95) feed(d.food); else if (d.food) AU.sfx('whoosh'); return; }
+  if (G.drag) { var d = G.drag; G.drag = null; if (d.can) { G.canOver = -1; if (!d.moved) waterAll(); return; } if (d.food && KG && Math.hypot(d.x - KG.mx, d.y - KG.my) < 95) feed(d.food); else if (d.food) AU.sfx('whoosh'); if (d.soap && !d.scrubbed) toast('Hold the soap and <b>rub it on ' + esc(nm()) + '</b> 🫧'); return; }
   if (G.pet) { if (G.pet.purr) { AU.purr(false); react('love', 1.2); AU.sfx('meow', 1.1); } G.pet = null; }
   if (!press || e.pointerId !== press.id) return; var pr = press; press = null;
   if (G.st !== 'room') return;
@@ -1528,12 +1540,13 @@ addEventListener('pointerup', function (e) {
   } else if (!pr.kd && Math.abs(p.x - pr.sx) > 70 && Math.abs(p.x - pr.sx) > Math.abs(p.y - pr.sy) * 1.5) goRoom(p.x < pr.sx ? 1 : -1, true);
 });
 addEventListener('pointercancel', function () { press = null; G.drag = null; if (G.pet) { AU.purr(false); G.pet = null; } });
+document.addEventListener('contextmenu', function (e) { if (!(e.target.closest && e.target.closest('input,textarea'))) e.preventDefault(); });
 function roomIdx() { return ROOMS.findIndex(function (r) { return r.id === S.room; }); }
 function goRoom(dir, rel) { var i = rel ? (roomIdx() + dir + ROOMS.length) % ROOMS.length : dir; if (ROOMS[i].id === S.room) return; if (S.asleep && S.room === 'bed') wakeUp(false); var from = roomIdx(); S.room = ROOMS[i].id; G.slide = (rel ? dir : (i > from ? 1 : -1)) * .9; G.bubbles = []; G.ball = null; G.hob = null; G.drag = null; AU.sfx('whoosh'); stripRefresh(); updHud(); tutHint(); if (sheetKind === 'decor') { if (S.room === 'garden') hideSheet(); else openDecor(); } else if (sheetKind === 'seeds' || sheetKind === 'farm' || sheetKind === 'poem') hideSheet(); zt('select_content', { content_type: 'room', item_id: S.room }); }
 function stripRefresh() {
   var h = '', r = S.room;
   if (r === 'kitchen') FOODS.forEach(function (f) { h += '<div class="si food" data-food="' + f.id + '"><canvas width="112" height="96" data-fd="' + f.id + '"></canvas><b>' + (f.p ? '<span class="coin s"></span>' + f.p : 'Free') + '</b></div>'; });
-  else if (r === 'bath') h = '<div class="si" data-soap="1"><canvas width="112" height="96" data-soapc="1"></canvas><b>Soap</b></div><button class="si" id="bShower"><span class="emo">🚿</span><b>Rinse</b></button>';
+  else if (r === 'bath') h = '<div class="si' + (soapN() ? '' : ' hot') + '" data-soap="1"><canvas width="112" height="96" data-soapc="1"></canvas><b>Soap</b></div><button class="si" id="bShower"><span class="emo">🚿</span><b>Rinse</b></button>';
   else if (r === 'bed') h = '<button class="si wide" id="bLamp"><span class="emo">' + (S.asleep ? '☀️' : '💡') + '</span><b>' + (S.asleep ? 'Lights on' : 'Lights off') + '</b></button>';
   else if (r === 'garden') h = '<button class="si" id="bSeeds"><span class="emo">🌱</span><b>Seeds</b></button><div class="si" data-can="1"><canvas width="112" height="96" data-canc="1"></canvas><b>Water</b></div><button class="si" id="bHarv"><span class="emo">🧺</span><b>Harvest</b></button><button class="si hot" id="bGBall"><span class="emo">⚽</span><b>Ball</b></button><button class="si" id="bFarm"><span class="emo">🏪</span><b>Farm</b></button>';
   else if (r === 'hobby') h = '<button class="si hob" id="bPiano"><span class="emo">🎹</span><b>Music</b></button><button class="si hob" id="bPaint"><span class="emo">🖌️</span><b>Art</b></button><button class="si hob" id="bPoem"><span class="emo">✍️</span><b>Poems</b></button>';
@@ -1563,7 +1576,32 @@ var toastN = 0; function toast(t) { var d = document.createElement('div'); d.cla
 function ach(id, t) { if (S.ach[id]) return; S.ach[id] = 1; save(); toast('🏆 ' + t); zt('unlock_achievement', { achievement_id: id }); }
 var TUT = [{ k: 'fed', room: 'kitchen', txt: 'Kedim is hungry! <b>Drag a food</b> to his mouth 🐟' }, { k: 'bath', room: 'bath', txt: '<b>Rub the soap</b> all over Kedim, then tap <b>Rinse</b> 🫧' }, { k: 'sleep', room: 'bed', txt: 'Tap <b>Lights off</b> so Kedim can nap 🌙' }];
 function rn(id) { return ROOMS.find(function (r) { return r.id === id; }); }
-function tutHint() { var s = TUT[S.tut], el = $('#tut'); if (G.st !== 'room') { el.classList.add('hidden'); return; } if (!s) { if (S.room === 'garden' && !S.garden.h) { el.innerHTML = 'Tap a bed to <b>plant</b> 🌱, drag the can to <b>water</b> 💧 (twice), then <b>harvest</b> 🧺'; el.classList.remove('hidden'); } else if (S.room === 'hobby' && !S.hobby.pt) { el.innerHTML = 'Tap the <b>piano</b> 🎹, <b>easel</b> 🖌️ or <b>poem board</b> ✍️ for hobbies'; el.classList.remove('hidden'); } else if (S.tut === TUT.length && S.room === 'play' && !S.stats.games) { el.innerHTML = 'Play <b>mini-games</b> for coins! The one played most shapes grown-up Kedim ✨'; el.classList.remove('hidden'); } else el.classList.add('hidden'); return; } el.innerHTML = S.room === s.room ? s.txt : 'Next: go to the <b>' + rn(s.room).n + '</b> ' + rn(s.room).ic + ' below'; el.classList.remove('hidden'); }
+var NEED_ROOM = { food: 'kitchen', fun: 'play', bath: 'bath', sleep: 'bed' };
+function goTxt(rid) { var r = rn(rid); return 'tap <b>' + r.n + '</b> ' + r.ic + ' below'; }
+function soapN() { return G.bubbles.filter(function (b) { return !b.pop; }).length; }
+function hintHtml() {
+  var s = TUT[S.tut], n = esc(nm()), eating = G.eat > 0 || !!G.eatFood || (G.t - (G.fedT || -99) < 2.5);
+  if (S.asleep) return S.room === 'bed' ? 'Shh... ' + n + ' is napping 💤 He wakes up when rested' : '';
+  if (s) {
+    if (S.room !== s.room) return 'Next: ' + goTxt(s.room);
+    if (s.k === 'fed') return eating ? '' : S.needs.food < 60 ? n + ' is hungry! <b>Drag a food</b> to his mouth 🐟' : '<b>Drag a food</b> to ' + n + '\'s mouth for a snack 🐟';
+    if (s.k === 'bath') return bathTxt(n);
+    return s.txt.replace(/Kedim/g, n);
+  }
+  var lk = lowest(), v = S.needs[lk];
+  if (v < 40 && !(lk === 'food' && eating)) {
+    var word = { food: 'hungry 🐟', fun: 'bored 🧶', bath: 'messy 🫧', sleep: 'sleepy 🌙' }[lk], rid = NEED_ROOM[lk];
+    if (S.room !== rid) return n + ' is ' + word + ' · ' + goTxt(rid);
+    return { food: n + ' is hungry! <b>Drag a food</b> to his mouth 🐟', fun: 'Pet ' + n + ', throw the <b>ball</b> or play <b>mini-games</b> 🧶', bath: bathTxt(n), sleep: 'Tap <b>Lights off</b> so ' + n + ' can nap 🌙' }[lk];
+  }
+  if (S.room === 'bath' && soapN()) return bathTxt(n);
+  if (S.room === 'garden' && !S.garden.h) return 'Tap a bed to <b>plant</b> 🌱, drag the can to <b>water</b> 💧 (twice), then <b>harvest</b> 🧺';
+  if (S.room === 'hobby' && !S.hobby.pt) return 'Tap the <b>piano</b> 🎹, <b>easel</b> 🖌️ or <b>poem board</b> ✍️ for hobbies';
+  if (S.room === 'play' && !S.stats.games) return 'Play <b>mini-games</b> for coins! The one played most shapes grown-up ' + n + ' ✨';
+  return '';
+}
+function bathTxt(n) { var k = soapN(); if (G.shower > 0) return 'Rinsing... 🚿'; if (k >= 9) return 'So soapy! Now tap <b>Rinse</b> 🚿'; return '<b>Hold the soap</b> and rub it back and forth on ' + n + ' 🫧' + (k ? ' <b>' + k + '/9</b>' : ''); }
+function tutHint() { var el = $('#tut'), h = G.st === 'room' ? hintHtml() : ''; if (!h) { el.classList.add('hidden'); G.hintH = ''; return; } if (h !== G.hintH || el.classList.contains('hidden')) { el.innerHTML = h; el.classList.remove('hidden'); G.hintH = h; } }
 function tutStep(k) { var s = TUT[S.tut]; if (!s || s.k !== k) return; S.tut++; if (S.tut === TUT.length) { zt('tutorial_complete'); toast('You are a great cat parent! 💖 +30'); addCoins(30, 'tutorial'); } save(); tutHint(); }
 var sheetKind = '';
 function sheet(title, html, kind) { $('#shT').innerHTML = title; $('#shB').innerHTML = html; var nw = $('#sheet').classList.contains('hidden') || sheetKind !== kind; $('#sheet').classList.remove('hidden'); if (nw) { $('#sheet .in').style.animation = 'none'; void $('#sheet .in').offsetWidth; $('#sheet .in').style.animation = ''; } sheetKind = kind; $$('#shB canvas[data-art]').forEach(drawThumb); }
@@ -1668,8 +1706,9 @@ function drawScreenArt(dt) {
   if (!$('#scrMissed').classList.contains('hidden')) { c = $('#missArt'); x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0); x.clearRect(0, 0, 300, 230); glow(x, 150, 120, 140, '#ffd0e8', .9); var jy = -Math.abs(Math.sin(artT * 6)) * 14; drawKedim(x, 150, 208 + jy, { stage: S.stage, form: S.form, t: artT, pose: 'happy', expr: (artT % 2) < 1.2 ? 'love' : 'happy', mouth: (artT % 2) > 1.2 ? .7 : 0, scale: S.stage === 0 ? 1.4 : 1.1, outfit: S.outfit }); for (i = 0; i < 4; i++) { k = (artT * .5 + i / 4) % 1; x.globalAlpha = Math.sin(k * Math.PI); heart(x, 40 + i * 74, 175 - k * 150, 20); fs(x, '#ff6b9a', 2, '#a0204a'); } x.globalAlpha = 1; }
   if (!$('#scrStage').classList.contains('hidden')) { c = $('#stageArt'); x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0); x.clearRect(0, 0, 300, 230); x.save(); x.translate(150, 125); x.rotate(artT * .4); for (i = 0; i < 12; i++) { x.rotate(TAU / 12); x.fillStyle = i % 2 ? 'rgba(255,240,150,.4)' : 'rgba(255,255,255,.28)'; x.beginPath(); x.moveTo(0, 0); x.lineTo(-18, -160); x.lineTo(18, -160); x.fill(); } x.restore(); glow(x, 150, 125, 110, '#fff6a0', .9); var pk = Math.min(1, artT * 1.5), sc = (S.stage === 3 ? 1.05 : 1.2) * (.6 + .4 * (1 - Math.pow(1 - pk, 3))); drawKedim(x, 150, 212, { stage: S.stage, form: S.form, t: artT, pose: 'happy', expr: 'happy', scale: sc, outfit: S.outfit }); for (i = 0; i < 6; i++) { k = (artT * .6 + i / 6) % 1; x.globalAlpha = Math.sin(k * Math.PI); x.fillStyle = '#fff'; star(x, 30 + i * 48, 200 - k * 180, 6, 2.4, artT, 4); x.fill(); } x.globalAlpha = 1; }
 }
+document.addEventListener('pointerdown', function (e) { var b = e.target.closest && e.target.closest('#bPlay,#bHug'); if (!b || b.disabled || (e.pointerType === 'mouse' && e.button !== 0)) return; e.preventDefault(); G.fastBtn = performance.now(); b.click(); });
 document.addEventListener('click', function (e) {
-  var b = e.target.closest('button'); if (!b || b.disabled) return; AU.init(); AU.sfx('tap');
+  var b = e.target.closest('button'); if (!b || b.disabled) return; if ((b.id === 'bPlay' || b.id === 'bHug') && e.isTrusted && performance.now() - (G.fastBtn || -1e9) < 1200) return; AU.init(); AU.sfx('tap');
   if (b.dataset.go) { if (b.dataset.go === 'back') show(prevScr); else { var cur = $$('.screen').find(function (s) { return !s.classList.contains('hidden'); }); prevScr = cur ? cur.id : 'scrTitle'; show(b.dataset.go); } return; }
   if (b.dataset.tab != null) { goRoom(+b.dataset.tab, false); if (sheetKind !== 'decor') hideSheet(); return; }
   if (b.dataset.mg) { hideSheet(); MG.start(b.dataset.mg); return; }
